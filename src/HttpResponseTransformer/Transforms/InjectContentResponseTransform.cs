@@ -99,7 +99,7 @@ internal class InjectContentResponseTransform : DocumentResponseTransform
         }
         if ((config.LoadingBehavior | LoadScript.Module) == config.LoadingBehavior)
         {
-            element.SetAttributeValue("module", "module");
+            element.SetAttributeValue("type", "module");
         }
         target.AppendChild(element);
     }
@@ -205,9 +205,9 @@ internal class InjectContentResponseTransform : DocumentResponseTransform
                     src = "data:";
                     if (config.ContentType is not null)
                     {
-                        src += $";{config.ContentType}";
+                        src += config.ContentType;
                     }
-                    src += $",{Convert.ToBase64String(data)}";
+                    src += $";base64,{Convert.ToBase64String(data)}";
                 }
                 else
                 {

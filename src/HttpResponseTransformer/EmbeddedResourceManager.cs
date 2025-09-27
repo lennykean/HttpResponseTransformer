@@ -15,7 +15,7 @@ internal class EmbeddedResourceManager : IEmbeddedResourceManager
         namespaceKey = ComputeHash(resourceAssembly.GetName().FullName);
         resourceKey = $"{ComputeHash(resourceName)}{Path.GetExtension(resourceName)}";
 
-        var stream = resourceAssembly.GetManifestResourceStream(resourceName);
+        using var stream = resourceAssembly.GetManifestResourceStream(resourceName);
         if (stream is null)
         {
             return false;

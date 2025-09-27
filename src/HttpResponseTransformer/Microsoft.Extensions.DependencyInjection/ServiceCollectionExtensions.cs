@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
     {
         var embeddedResourceManager = new EmbeddedResourceManager();
 
-        services.AddSingleton<IStartupFilter, StartupFilter>(); ;
+        services.AddSingleton<IStartupFilter, StartupFilter>();
         services.AddSingleton<IEmbeddedResourceManager>(embeddedResourceManager);
 
         services.AddTransient<RequestTransformerMiddleware>();
