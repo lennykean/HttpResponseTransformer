@@ -1,0 +1,32 @@
+name: Publish
+
+on:
+  push:
+    tags:
+    - v*
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./src
+    steps:
+    - uses: actions/checkout@v5
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+    - run: |
+        git fetch --all
+        BRANCH_NAME=$(git branch -r --contains ${{ github.sha }} | sed -e "s/.*\///" | xargs)
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+    - name: Set version and suffix
+      run: |
+        VERSION=$(echo ${GITHUB_REF#refs/tags/v})"."${GITHUB_RUN_NUMBER}
+        if [[ "${{ env.BRANCH_NAME }}" != "main" ]]; then
+          VERSION=${VERSION}-prerelease
+        fi
+        echo "VERSION_SUFFIX=${SUFFIX}" >> $GITHUB_ENV
+        echo "VERSION=${VERSION}" >> $GITHUB_ENV
+    - run: dotnet pack --configuration Release /p:Version=${{ env.VERSION }}
+    - run: dotnet nuget push "**/*.nupkg" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
