@@ -43,6 +43,8 @@ internal class RequestTransformerMiddleware(IEnumerable<IResponseTransform> tran
             buffer.Write(content);
             buffer.Seek(0, SeekOrigin.Begin);
 
+            context.Response.ContentLength = content.Length;
+
             await buffer.CopyToAsync(responseStream);
         }
         finally

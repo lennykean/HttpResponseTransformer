@@ -224,6 +224,10 @@ internal class InjectContentResponseTransform : DocumentResponseTransform
         {
             element.SetAttributeValue("title", config.Title);
         }
+        if (config.CssClass is not null)
+        {
+            element.SetAttributeValue("class", config.CssClass);
+        }
         target.AppendChild(element);
 
     }

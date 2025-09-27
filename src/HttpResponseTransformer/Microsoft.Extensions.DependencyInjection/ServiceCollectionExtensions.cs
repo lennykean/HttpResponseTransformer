@@ -8,6 +8,7 @@ using HttpResponseTransformer.Middleware;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 #pragma warning disable IDE0130
 namespace Microsoft.Extensions.DependencyInjection;
@@ -19,15 +20,16 @@ public static class ServiceCollectionExtensions
     /// Add HTTP response transform services to the dependency injection container
     /// </summary>
     /// <param name="configure">Optional configuration function for setting up response transforms.</param>
-    public static IServiceCollection AddResponseTransforms(this IServiceCollection services, Func<ResponseTransformBuilder, ResponseTransformBuilder>? configure)
+    public static IServiceCollection AddResponseTransformer(this IServiceCollection services, Func<ResponseTransformBuilder, ResponseTransformBuilder>? configure)
     {
         var embeddedResourceManager = new EmbeddedResourceManager();
 
-        services.AddSingleton<IStartupFilter, StartupFilter>();
-        services.AddSingleton<IEmbeddedResourceManager>(embeddedResourceManager);
+        services.TryAddSingleton<IEmbeddedResourceManager>(embeddedResourceManager);
 
-        services.AddTransient<RequestTransformerMiddleware>();
-        services.AddTransient<EmbeddedResourceMiddleware>();
+        services.TryAddTransient<RequestTransformerMiddleware>();
+        services.TryAddTransient<EmbeddedResourceMiddleware>();
+
+        services.AddTransient<IStartupFilter, StartupFilter>();
 
         if (configure is not null)
         {

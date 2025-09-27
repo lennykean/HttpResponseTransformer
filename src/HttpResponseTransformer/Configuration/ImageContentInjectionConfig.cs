@@ -4,4 +4,5 @@ public record ImageContentInjectionConfig() : ContentInjectionConfig("//body", "
 {
     public string? Alt { get; init; }
     public string? Title { get; init; }
+    public string? CssClass { get; init; }
 }

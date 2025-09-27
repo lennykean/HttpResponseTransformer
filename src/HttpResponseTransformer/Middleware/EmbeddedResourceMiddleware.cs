@@ -25,7 +25,7 @@ internal class EmbeddedResourceMiddleware(IEmbeddedResourceManager embeddedResou
 
         if (!embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var data, out var contentType))
         {
-            context.Response.StatusCode = 404;
+            await next(context);
             return;
         }
         context.Response.ContentType = contentType ?? "application/octet-stream";

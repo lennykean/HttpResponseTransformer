@@ -45,6 +45,12 @@ public record ImageContentInjectionBuilder(ImageContentInjectionConfig Config)
     /// </summary>
     /// <param name="title">The title attribute for the image.</param>
     public ImageContentInjectionBuilder WithTitle(string title) => this with { Config = Config with { Title = title } };
+
+    /// <summary>
+    /// Set the CSS class for the injected image
+    /// </summary>
+    /// <param name="cssClass">The CSS class for the image.</param>
+    public ImageContentInjectionBuilder WithCssClass(string cssClass) => this with { Config = Config with { CssClass = cssClass } };
 }
 
 /// <summary>
