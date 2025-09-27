@@ -41,20 +41,20 @@ public record ResponseTransformBuilder
     }
 
     /// <summary>
-    /// Add an HTML page transform to the pipeline
+    /// Add an HTML document transform to the pipeline
     /// </summary>
     /// <param name="transform">The HTML response transform to add.</param>
-    public ResponseTransformBuilder TransformHtmlPage(HtmlResponseTransform transform)
+    public ResponseTransformBuilder TransformDocument(DocumentResponseTransform transform)
     {
         return TransformText(transform);
     }
 
     /// <summary>
-    /// Add an content injection transform to the pipeline
+    /// Add an HTML document transform to the pipeline
     /// </summary>
     /// <param name="configure">The fluent builder function to configure the content injection transform.</param>
-    public ResponseTransformBuilder TransformHtmlPage(Func<ContentInjectionConfigBuilder, ContentInjectionConfigBuilder> configure)
+    public ResponseTransformBuilder TransformDocument(Func<DocumentInjectionConfigBuilder, DocumentInjectionConfigBuilder> configure)
     {
-        return TransformHtmlPage(new InjectContentResponseTransform(configure(new(new())).Config, _embeddedResourceManager));
+        return TransformDocument(new InjectContentResponseTransform(configure(new(new())).Config, _embeddedResourceManager));
     }
 }

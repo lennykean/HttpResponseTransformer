@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <Description></Description>
+    <Description>An ASP.NET Core library for injecting customizable transforms into the HTTP response pipeline.</Description>
     <PackageProjectUrl>https://github.com/lennykean/HttpResponseTransformer</PackageProjectUrl>
     <RepositoryUrl>https://github.com/lennykean/HttpResponseTransformer</RepositoryUrl>
     <RepositoryType>git</RepositoryType>

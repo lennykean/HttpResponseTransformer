@@ -12,7 +12,7 @@ namespace HttpResponseTransformer.Transforms;
 /// <summary>
 /// A transform that operates on HTML HTTP responses
 /// </summary>
-public class HtmlResponseTransform : TextResponseTransform
+public class DocumentResponseTransform : TextResponseTransform
 {
     /// <inheritdoc>
     public override bool ShouldTransform(HttpContext context)

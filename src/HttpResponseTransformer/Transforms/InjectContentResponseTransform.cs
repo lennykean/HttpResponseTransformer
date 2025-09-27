@@ -1,3 +1,4 @@
+using System;
 using System.Text;
 
 using HtmlAgilityPack;
@@ -9,12 +10,12 @@ using Microsoft.AspNetCore.Http;
 
 namespace HttpResponseTransformer.Transforms;
 
-internal class InjectContentResponseTransform : HtmlResponseTransform
+internal class InjectContentResponseTransform : DocumentResponseTransform
 {
-    private readonly ContentInjectionConfig _config;
+    private readonly InjectionConfig _config;
     private readonly IEmbeddedResourceManager _embeddedResourceManager;
 
-    public InjectContentResponseTransform(ContentInjectionConfig config, IEmbeddedResourceManager embeddedResourceManager)
+    public InjectContentResponseTransform(InjectionConfig config, IEmbeddedResourceManager embeddedResourceManager)
     {
         _config = config;
         _embeddedResourceManager = embeddedResourceManager;
@@ -29,24 +30,31 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
 
     public override void ExecuteTransform(HttpContext context, ref HtmlDocument document)
     {
-        foreach (var config in _config.InjectContentConfigs)
+        foreach (var config in _config.ContentInjectionConfigs)
         {
-            if (config is InjectScriptConfig scriptConfig)
+            switch (config)
             {
-                InjectScript(document, scriptConfig);
-            }
-            else if (config is InjectStyleSheetConfig styleSheetConfig)
-            {
-                InjectStyleSheet(document, styleSheetConfig);
+                case ScriptContentInjectionConfig scriptConfig:
+                    InjectScript(document, scriptConfig);
+                    break;
+                case StyleSheetContentInjectionConfig styleSheetConfig:
+                    InjectStyleSheet(document, styleSheetConfig);
+                    break;
+                case HtmlContentInjectionConfig htmlConfig:
+                    InjectHtml(document, htmlConfig);
+                    break;
+                case ImageContentInjectionConfig imageConfig:
+                    InjectImage(document, imageConfig);
+                    break;
             }
         }
     }
 
     private void RegisterEmbeddedResources()
     {
-        foreach (var config in _config.InjectContentConfigs)
+        foreach (var config in _config.ContentInjectionConfigs)
         {
-            if (config.ResourceAssembly is null || config.ResourceName is null || config.Inline is true)
+            if (config.ResourceAssembly is null || config.ResourceName is null)
             {
                 continue;
             }
@@ -54,10 +62,15 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
         }
     }
 
-    private void InjectScript(HtmlDocument document, InjectScriptConfig config)
+    private void InjectScript(HtmlDocument document, ScriptContentInjectionConfig config)
     {
-        var element = document.CreateElement("script");
+        var target = document.DocumentNode.SelectSingleNode(config.XPath);
+        if (target is null)
+        {
+            return;
+        }
 
+        var element = document.CreateElement("script");
         if (config.Url is not null)
         {
             element.SetAttributeValue("src", config.Url);
@@ -66,9 +79,9 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
         {
             if (_embeddedResourceManager.TryGetResourceKeys(config.ResourceAssembly, config.ResourceName, out var namespaceKey, out var resourceKey))
             {
-                if (config.Inline is true && _embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var script, out var _))
+                if (config.Inline is true && _embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var data, out var _))
                 {
-                    element.AppendChild(document.CreateTextNode(Encoding.UTF8.GetString(script)));
+                    element.AppendChild(document.CreateTextNode(Encoding.UTF8.GetString(data)));
                 }
                 else
                 {
@@ -76,25 +89,30 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
                 }
             }
         }
-        if ((config.LoadBehavior & LoadScript.Async) == config.LoadBehavior)
+        if ((config.LoadingBehavior | LoadScript.Async) == config.LoadingBehavior)
         {
             element.SetAttributeValue("async", "async");
         }
-        if ((config.LoadBehavior & LoadScript.Deferred) == config.LoadBehavior)
+        if ((config.LoadingBehavior | LoadScript.Deferred) == config.LoadingBehavior)
         {
             element.SetAttributeValue("defer", "defer");
         }
-        if ((config.LoadBehavior & LoadScript.Module) == config.LoadBehavior)
+        if ((config.LoadingBehavior | LoadScript.Module) == config.LoadingBehavior)
         {
             element.SetAttributeValue("module", "module");
         }
-        AppendElement(document, element, config.AppendTo);
+        target.AppendChild(element);
     }
 
-    private void InjectStyleSheet(HtmlDocument document, InjectStyleSheetConfig config)
+    private void InjectStyleSheet(HtmlDocument document, StyleSheetContentInjectionConfig config)
     {
-        var element = document.CreateElement(config.Inline is true ? "style" : "link");
+        var target = document.DocumentNode.SelectSingleNode(config.XPath);
+        if (target is null)
+        {
+            return;
+        }
 
+        var element = document.CreateElement(config.Inline is true ? "style" : "link");
         if (config.Url is not null)
         {
             element.SetAttributeValue("href", config.Url);
@@ -103,9 +121,9 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
         {
             if (_embeddedResourceManager.TryGetResourceKeys(config.ResourceAssembly, config.ResourceName, out var namespaceKey, out var resourceKey))
             {
-                if (config.Inline is true && _embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var styleSheet, out var _))
+                if (config.Inline is true && _embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var data, out var _))
                 {
-                    element.AppendChild(document.CreateTextNode(Encoding.UTF8.GetString(styleSheet)));
+                    element.AppendChild(document.CreateTextNode(Encoding.UTF8.GetString(data)));
                 }
                 else
                 {
@@ -125,17 +143,88 @@ internal class InjectContentResponseTransform : HtmlResponseTransform
         {
             element.SetAttributeValue("title", config.Title);
         }
-        AppendElement(document, element, config.AppendTo);
+        target.AppendChild(element);
     }
 
-    private static void AppendElement(HtmlDocument document, HtmlNode element, DocumentLocation location)
+    private void InjectHtml(HtmlDocument document, HtmlContentInjectionConfig config)
     {
-        var target = location switch
+        var target = document.DocumentNode.SelectSingleNode(config.XPath);
+        if (target is null)
         {
-            DocumentLocation.Head => document.DocumentNode.SelectSingleNode("//head"),
-            DocumentLocation.Body => document.DocumentNode.SelectSingleNode("//body"),
-            _ => document.DocumentNode,
-        };
+            return;
+        }
+
+        var element = document.CreateTextNode();
+        if (config.Content is not null)
+        {
+            element.InnerHtml = config.Content;
+        }
+        else
+        {
+            if (config.ResourceAssembly is not null && config.ResourceName is not null)
+            {
+                if (_embeddedResourceManager.TryGetResourceKeys(config.ResourceAssembly, config.ResourceName, out var namespaceKey, out var resourceKey))
+                {
+                    if (_embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var data, out var _))
+                    {
+                        element.InnerHtml = Encoding.UTF8.GetString(data);
+                    }
+                }
+            }
+        }
+        if (config.Replace is true)
+        {
+            target.ParentNode.ReplaceChild(element, target);
+        }
+        else
+        {
+            target.AppendChild(element);
+        }
+    }
+
+    private void InjectImage(HtmlDocument document, ImageContentInjectionConfig config)
+    {
+        var target = document.DocumentNode.SelectSingleNode(config.XPath);
+        if (target is null)
+        {
+            return;
+        }
+
+        var element = document.CreateElement("img");
+        if (config.Url is not null)
+        {
+            element.SetAttributeValue("src", config.Url);
+        }
+        else if (config.ResourceAssembly is not null && config.ResourceName is not null)
+        {
+            if (_embeddedResourceManager.TryGetResourceKeys(config.ResourceAssembly, config.ResourceName, out var namespaceKey, out var resourceKey))
+            {
+                string src;
+                if (config.Inline is true && _embeddedResourceManager.TryGetResource(namespaceKey, resourceKey, out var data, out var _))
+                {
+                    src = "data:";
+                    if (config.ContentType is not null)
+                    {
+                        src += $";{config.ContentType}";
+                    }
+                    src += $",{Convert.ToBase64String(data)}";
+                }
+                else
+                {
+                    src = $"/_/{namespaceKey}/{resourceKey}";
+                }
+                element.SetAttributeValue("src", src);
+            }
+        }
+        if (config.Alt is not null)
+        {
+            element.SetAttributeValue("alt", config.Alt);
+        }
+        if (config.Title is not null)
+        {
+            element.SetAttributeValue("title", config.Title);
+        }
         target.AppendChild(element);
+
     }
 }

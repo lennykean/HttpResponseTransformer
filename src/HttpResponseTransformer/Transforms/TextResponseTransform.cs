@@ -11,7 +11,7 @@ namespace HttpResponseTransformer.Transforms;
 /// </summary>
 public class TextResponseTransform : IResponseTransform
 {
-    /// </inheritdoc>
+    /// <inheritdoc/>
     public virtual bool ShouldTransform(HttpContext context)
     {
         return (
