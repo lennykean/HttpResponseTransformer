@@ -1,5 +1,7 @@
 # HttpResponseTransformer
 
+[![Build](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/build.yml/badge.svg)](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/build.yml)
+
 An ASP.NET Core library for injecting customizable transforms into the HTTP response pipeline. This library enables dynamic modification of HTTP responses, with specialized support for HTML document manipulation and content injection.
 
 ## Motivation
