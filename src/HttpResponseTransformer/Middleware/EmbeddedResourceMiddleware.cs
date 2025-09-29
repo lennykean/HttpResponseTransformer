@@ -1,21 +1,23 @@
+using System;
 using System.Threading.Tasks;
 
 using Microsoft.AspNetCore.Http;
 
 namespace HttpResponseTransformer.Middleware;
 
-internal class EmbeddedResourceMiddleware(IEmbeddedResourceManager embeddedResourceManager) : IMiddleware
+internal class EmbeddedResourceMiddleware(
+    RequestDelegate next,
+    IEmbeddedResourceManager embeddedResourceManager)
 {
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context)
     {
-        var path = context.Request.Path.Value?.TrimStart('/');
-        if (string.IsNullOrEmpty(path))
+        if (!context.Request.Path.StartsWithSegments("/_", out var path))
         {
             await next(context);
             return;
         }
-        var parts = path.Split('/');
-        if (parts.Length != 2)
+        var parts = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (parts?.Length != 2)
         {
             await next(context);
             return;

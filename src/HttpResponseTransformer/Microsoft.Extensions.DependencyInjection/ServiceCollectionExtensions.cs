@@ -48,13 +48,11 @@ public static class ServiceCollectionExtensions
             {
                 if (Interlocked.CompareExchange(ref _isConfigured, value: 1, comparand: 0) == 0)
                 {
-                    next(builder.UseMiddleware<RequestTransformerMiddleware>());
-                    builder.Map("/_", b => b.UseMiddleware<EmbeddedResourceMiddleware>());
+                    builder
+                       .UseMiddleware<RequestTransformerMiddleware>()
+                       .MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/_"), b => b.UseMiddleware<EmbeddedResourceMiddleware>());
                 }
-                else
-                {
-                    next(builder);
-                }
+                next(builder);
             };
         }
     }
