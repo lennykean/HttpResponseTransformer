@@ -1,5 +1,6 @@
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
+using System.Linq;
 
 using HttpResponseTransformer.Transforms;
 
@@ -17,7 +18,20 @@ public record ResponseTransformBuilder
         _embeddedResourceManager = embeddedResourceManager;
     }
 
-    public ImmutableArray<IResponseTransform> Transforms { get; init; } = [];
+    public ResponseTransformerConfig Config { get; init; } = new();
+    public IEnumerable<IResponseTransform> Transforms { get; init; } = [];
+
+    /// <summary>
+    /// Allow response compression
+    /// </summary>
+    /// <remarks>
+    /// By default, response compression is bypassed when executing transforms.
+    /// Turning this setting on may require transforms to handle compressed content.
+    /// </remarks>
+    public ResponseTransformBuilder AllowResponseCompression()
+    {
+        return this with { Config = Config with { AllowResponseCompression = true } };
+    }
 
     /// <summary>
     /// Add a response transform to the pipeline
@@ -27,7 +41,7 @@ public record ResponseTransformBuilder
     {
         return this with
         {
-            Transforms = Transforms.Add(transform)
+            Transforms = Transforms.Append(transform)
         };
     }
 

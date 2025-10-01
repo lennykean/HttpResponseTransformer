@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 
 using Microsoft.AspNetCore.Http;
 
@@ -29,7 +30,7 @@ public record DocumentInjectionConfigBuilder(InjectionConfig Config)
     {
         return new(Config with
         {
-            ContentInjectionConfigs = Config.ContentInjectionConfigs.Add(config)
+            ContentInjectionConfigs = Config.ContentInjectionConfigs.Append(config)
         });
     }
 
@@ -50,7 +51,7 @@ public record DocumentInjectionConfigBuilder(InjectionConfig Config)
     {
         return new(Config with
         {
-            ContentInjectionConfigs = Config.ContentInjectionConfigs.Add(config)
+            ContentInjectionConfigs = Config.ContentInjectionConfigs.Append(config)
         });
     }
 
@@ -69,7 +70,7 @@ public record DocumentInjectionConfigBuilder(InjectionConfig Config)
     /// <param name="config">The configuration for the HTML injection.</param>
     public DocumentInjectionConfigBuilder InjectHtml(HtmlContentInjectionConfig config)
     {
-        return new(Config with { ContentInjectionConfigs = Config.ContentInjectionConfigs.Add(config) });
+        return new(Config with { ContentInjectionConfigs = Config.ContentInjectionConfigs.Append(config) });
     }
 
     /// <summary>
@@ -87,7 +88,7 @@ public record DocumentInjectionConfigBuilder(InjectionConfig Config)
     /// <param name="config">The configuration for the image injection.</param>
     public DocumentInjectionConfigBuilder InjectImage(ImageContentInjectionConfig config)
     {
-        return new(Config with { ContentInjectionConfigs = Config.ContentInjectionConfigs.Add(config) });
+        return new(Config with { ContentInjectionConfigs = Config.ContentInjectionConfigs.Append(config) });
     }
 
     /// <summary>

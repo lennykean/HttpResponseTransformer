@@ -17,14 +17,18 @@ public class DocumentResponseTransform : TextResponseTransform
     /// <inheritdoc>
     public override bool ShouldTransform(HttpContext context)
     {
-        return base.ShouldTransform(context) && (
-            context.Request.Headers["accept"].Count == 0 ||
-            context.Request.Headers["accept"].Any(a => a?.Contains("text/html", StringComparison.OrdinalIgnoreCase) is true) is true);
+        return base.ShouldTransform(context) &&
+            context.Request?.GetTypedHeaders().Accept?.Any(a => a.SubType == "html") is true;
     }
 
     /// <inheritdoc>
     public sealed override void ExecuteTransform(HttpContext context, ref string content)
     {
+        var contentType = context.Response.GetTypedHeaders()?.ContentType;
+        if (contentType?.Type != "text" || contentType?.SubType != "html")
+        {
+            return;
+        }
         var document = new HtmlDocument();
         document.LoadHtml(content);
 

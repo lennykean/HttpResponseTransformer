@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Reflection;
 using System.Security.Cryptography;
@@ -8,7 +8,7 @@ namespace HttpResponseTransformer;
 
 internal class EmbeddedResourceManager : IEmbeddedResourceManager
 {
-    private readonly Dictionary<(string NamespaceKey, string ResourceKey), (byte[] Data, string? ContentType)> _resources = [];
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, (byte[] Data, string? ContentType)>> _resources = [];
 
     public bool TryAddResource(Assembly resourceAssembly, string resourceName, string? contentType, out string namespaceKey, out string resourceKey)
     {
@@ -24,7 +24,14 @@ internal class EmbeddedResourceManager : IEmbeddedResourceManager
         using var buffer = new MemoryStream();
         stream.CopyTo(buffer);
 
-        return _resources.TryAdd((namespaceKey, resourceKey), (buffer.ToArray(), contentType));
+        if (!_resources.TryGetValue(namespaceKey, out var namespaceResources))
+        {
+            namespaceResources = new();
+            _resources.TryAdd(namespaceKey, namespaceResources);
+        }
+        namespaceResources[resourceKey] = (buffer.ToArray(), contentType);
+
+        return true;
     }
 
     public bool TryGetResourceKeys(Assembly resourceAssembly, string resourceName, out string namespaceKey, out string resourceKey)
@@ -32,7 +39,11 @@ internal class EmbeddedResourceManager : IEmbeddedResourceManager
         namespaceKey = ComputeHash(resourceAssembly.GetName().FullName);
         resourceKey = $"{ComputeHash(resourceName)}{Path.GetExtension(resourceName)}";
 
-        return _resources.ContainsKey((namespaceKey, resourceKey));
+        if (!_resources.TryGetValue(namespaceKey, out var namespaceResources))
+        {
+            return false;
+        }
+        return namespaceResources.ContainsKey(resourceKey);
     }
 
     public bool TryGetResource(string namespaceKey, string resourceKey, out byte[] data, out string? contentType)
@@ -40,13 +51,18 @@ internal class EmbeddedResourceManager : IEmbeddedResourceManager
         data = [];
         contentType = null;
 
-        if (_resources.TryGetValue((namespaceKey, resourceKey), out var resource))
+        if (!_resources.TryGetValue(namespaceKey, out var namespaceResources))
         {
-            data = resource.Data;
-            contentType = resource.ContentType;
-            return true;
+            return false;
         }
-        return false;
+        if (!namespaceResources.TryGetValue(resourceKey, out var resource))
+        {
+            return false;
+        }
+        data = resource.Data;
+        contentType = resource.ContentType;
+
+        return true;
     }
 
     private static string ComputeHash(string input)

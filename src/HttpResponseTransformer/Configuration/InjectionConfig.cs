@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 
 using Microsoft.AspNetCore.Http;
 
@@ -9,5 +9,5 @@ public record InjectionConfig
 {
     public Func<HttpContext, bool> Predicate { get; init; } = _ => true;
 
-    public ImmutableArray<ContentInjectionConfig> ContentInjectionConfigs { get; init; } = [];
+    public IEnumerable<ContentInjectionConfig> ContentInjectionConfigs { get; init; } = [];
 }

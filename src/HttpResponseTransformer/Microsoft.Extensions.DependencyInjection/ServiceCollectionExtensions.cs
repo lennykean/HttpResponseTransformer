@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Threading;
 
 using HttpResponseTransformer;
@@ -26,14 +25,19 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton<IEmbeddedResourceManager>(embeddedResourceManager);
 
-        services.TryAddTransient<RequestTransformerMiddleware>();
+        services.TryAddTransient<ResponseTransformerMiddleware>();
         services.TryAddTransient<EmbeddedResourceMiddleware>();
 
         services.AddTransient<IStartupFilter, StartupFilter>();
 
         if (configure is not null)
         {
-            configure(new(embeddedResourceManager)).Transforms.ToList().ForEach(t => services.AddSingleton(t));
+            var builder = configure(new(embeddedResourceManager));
+            services.AddSingleton(builder.Config);
+            foreach (var transform in builder.Transforms)
+            {
+                services.AddSingleton(transform);
+            }
         }
         return services;
     }
@@ -49,7 +53,7 @@ public static class ServiceCollectionExtensions
                 if (Interlocked.CompareExchange(ref _isConfigured, value: 1, comparand: 0) == 0)
                 {
                     builder
-                       .UseMiddleware<RequestTransformerMiddleware>()
+                       .UseMiddleware<ResponseTransformerMiddleware>()
                        .MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/_"), b => b.UseMiddleware<EmbeddedResourceMiddleware>());
                 }
                 next(builder);

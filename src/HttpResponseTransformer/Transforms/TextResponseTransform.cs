@@ -14,24 +14,27 @@ public class TextResponseTransform : IResponseTransform
     /// <inheritdoc/>
     public virtual bool ShouldTransform(HttpContext context)
     {
-        return (
-            context.Request.Headers["accept"].Count == 0 ||
-            context.Request.Headers["accept"].Any(a => a?.Contains("text/", StringComparison.OrdinalIgnoreCase) is true) is true);
+        return context.Request?.GetTypedHeaders().Accept?.Any(a => a.Type == "text") is true;
     }
 
     /// <inheritdoc>
     public void ExecuteTransform(HttpContext context, ref byte[] content)
     {
-        if (context.Response.ContentType?.Contains("text/", StringComparison.OrdinalIgnoreCase) is not true)
+        var contentType = context.Response.GetTypedHeaders()?.ContentType;
+        if (contentType?.Type != "text")
         {
             return;
         }
-
-        var contentString = Encoding.UTF8.GetString(content);
+        if (context.Response.Headers["content-encoding"].Any() is true)
+        {
+            return;
+        }
+        var encoding = contentType?.Encoding ?? Encoding.Default;
+        var contentString = encoding.GetString(content);
 
         ExecuteTransform(context, ref contentString);
 
-        content = Encoding.UTF8.GetBytes(contentString);
+        content = encoding.GetBytes(contentString);
     }
 
     /// <summary>
