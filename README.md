@@ -62,6 +62,22 @@ HttpResponseTransformer integrates into the ASP.NET Core's middleware pipeline t
 
 > **Important**:  Transforms buffer the entire response stream in memory. Care should be taken when working with large documents or streaming content. `ShouldTransform()` or `builder.When()` should be used to target specific requests and avoid unnecessary buffering.
 
+### Response Compression
+
+By default, HttpResponseTransformer bypasses response compression when executing a transform by temporarily clearing the `Accept-Encoding` HTTP header.
+
+This behavior can be disabled by calling `AllowResponseCompression()`.
+
+```csharp
+services.AddResponseTransformer(builder => builder
+    .AllowResponseCompression()
+    .TransformDocument(config => config
+        ...
+    ));
+```
+
+> **Warning**: When response compression is enabled, transforms should be prepared to handle compressed content themselves. Built-in transforms will fail if they receive compressed data.
+
 ### Types of Transforms
 
 The library provides four types of transforms, each building on the previous level:
