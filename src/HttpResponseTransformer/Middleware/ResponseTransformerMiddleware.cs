@@ -7,6 +7,7 @@ using HttpResponseTransformer.Configuration;
 using HttpResponseTransformer.Transforms;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.Net.Http.Headers;
 
 namespace HttpResponseTransformer.Middleware;
 
@@ -20,7 +21,7 @@ internal class ResponseTransformerMiddleware(IEnumerable<IResponseTransform> tra
             await next(context);
             return;
         }
-        var acceptEncoding = context.Request.Headers["accept-encoding"];
+        var acceptEncoding = context.Request.Headers[HeaderNames.AcceptEncoding];
         var contentStream = context.Response.Body;
         try
         {
@@ -28,7 +29,7 @@ internal class ResponseTransformerMiddleware(IEnumerable<IResponseTransform> tra
 
             if (config?.AllowResponseCompression is not true)
             {
-                context.Request.Headers["accept-encoding"] = default;
+                context.Request.Headers[HeaderNames.AcceptEncoding] = default;
             }
             context.Response.Body = buffer;
 
@@ -56,7 +57,7 @@ internal class ResponseTransformerMiddleware(IEnumerable<IResponseTransform> tra
         {
             if (config?.AllowResponseCompression is not true)
             {
-                context.Request.Headers["accept-encoding"] = acceptEncoding;
+                context.Request.Headers[HeaderNames.AcceptEncoding] = acceptEncoding;
             }
             context.Response.Body = contentStream;
         }

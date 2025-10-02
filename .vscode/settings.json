@@ -3,5 +3,5 @@
   "[csharp]": {
     "editor.defaultFormatter": "anysphere.csharp"
   },
-  "cSpell.words": ["comparand", "Inlineable", "Jellyfin", "netstandard", "Registrator", "snupkg"]
+  "cSpell.words": ["comparand", "Inlineable", "Jellyfin", "netstandard", "Registrator", "snupkg", "stylesheet"]
 }

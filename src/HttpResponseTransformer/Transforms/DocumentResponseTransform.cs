@@ -12,13 +12,16 @@ namespace HttpResponseTransformer.Transforms;
 /// <summary>
 /// A transform that operates on HTML HTTP responses
 /// </summary>
-public class DocumentResponseTransform : TextResponseTransform
+public abstract class DocumentResponseTransform : TextResponseTransform
 {
     /// <inheritdoc>
     public override bool ShouldTransform(HttpContext context)
     {
-        return base.ShouldTransform(context) &&
-            context.Request?.GetTypedHeaders().Accept?.Any(a => a.SubType == "html") is true;
+        var accept = context.Request?.GetTypedHeaders().Accept;
+        return
+            base.ShouldTransform(context) && (
+            accept?.Any() is not true ||
+            accept?.Any(a => a.SubType == "html") is true);
     }
 
     /// <inheritdoc>

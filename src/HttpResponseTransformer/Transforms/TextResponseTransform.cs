@@ -9,12 +9,15 @@ namespace HttpResponseTransformer.Transforms;
 /// <summary>
 /// A transform that operates on text-based HTTP responses
 /// </summary>
-public class TextResponseTransform : IResponseTransform
+public abstract class TextResponseTransform : IResponseTransform
 {
     /// <inheritdoc/>
     public virtual bool ShouldTransform(HttpContext context)
     {
-        return context.Request?.GetTypedHeaders().Accept?.Any(a => a.Type == "text") is true;
+        var accept = context.Request?.GetTypedHeaders().Accept;
+        return
+            accept?.Any() is not true ||
+            accept?.Any(a => a.Type == "text") is true;
     }
 
     /// <inheritdoc>

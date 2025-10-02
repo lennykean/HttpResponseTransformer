@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpResponseTransformer", "HttpResponseTransformer\HttpResponseTransformer.csproj", "{9DDAFE0D-9BA0-48C8-8BC2-5D69CD743A3E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpResponseTransformer.Tests", "HttpResponseTransformer.Tests\HttpResponseTransformer.Tests.csproj", "{8E67D14F-2679-4616-89E7-8834CA2F20E1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{9DDAFE0D-9BA0-48C8-8BC2-5D69CD743A3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9DDAFE0D-9BA0-48C8-8BC2-5D69CD743A3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9DDAFE0D-9BA0-48C8-8BC2-5D69CD743A3E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E67D14F-2679-4616-89E7-8834CA2F20E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E67D14F-2679-4616-89E7-8834CA2F20E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E67D14F-2679-4616-89E7-8834CA2F20E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E67D14F-2679-4616-89E7-8834CA2F20E1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
