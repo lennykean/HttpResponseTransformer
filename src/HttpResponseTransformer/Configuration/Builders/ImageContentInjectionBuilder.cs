@@ -18,13 +18,12 @@ public record ImageContentInjectionBuilder(ImageContentInjectionConfig Config)
     /// </summary>
     /// <param name="resourceName">The name of the embedded resource containing the image.</param>
     /// <param name="resourceAssembly">The assembly containing the resource.</param>
-    /// <remarks>If <paramref name="resourceAssembly"/> is not provided, the calling assembly will be used.</remarks>
-    public EmbeddedImageContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly? resourceAssembly = null)
+    public EmbeddedImageContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly resourceAssembly)
     {
         return new(Config with
         {
             ResourceName = resourceName,
-            ResourceAssembly = resourceAssembly ?? Assembly.GetCallingAssembly(),
+            ResourceAssembly = resourceAssembly,
         });
     }
 

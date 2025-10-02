@@ -20,13 +20,12 @@ public record StyleSheetContentInjectionBuilder(StyleSheetContentInjectionConfig
     /// </summary>
     /// <param name="resourceName">The name of the embedded resource containing the style-sheet.</param>
     /// <param name="resourceAssembly">The assembly containing the resource.</param>
-    /// <remarks>If <paramref name="resourceAssembly"/> is not provided, the calling assembly will be used.</remarks>
-    public EmbeddedStyleSheetContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly? resourceAssembly = null)
+    public EmbeddedStyleSheetContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly resourceAssembly)
     {
         return new(Config with
         {
             ResourceName = resourceName,
-            ResourceAssembly = resourceAssembly ?? Assembly.GetCallingAssembly(),
+            ResourceAssembly = resourceAssembly,
         });
     }
 

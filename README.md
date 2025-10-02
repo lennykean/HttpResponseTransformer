@@ -50,7 +50,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
             .TransformDocument(injectPage => injectPage
                 .When(ctx => ctx.Request.Path == "/web")
                 .InjectScript(script => script
-                    .FromEmbeddedResource($"{GetType().Namespace}.scripts.my-custom-script.js")
+                    .FromEmbeddedResource($"{GetType().Namespace}.scripts.my-custom-script.js", GetType().Assembly)
                     .AsDeferred())));
     }
 }
@@ -94,7 +94,7 @@ Use the built-in content injection system to add scripts, stylesheets, HTML cont
 ```csharp
 services.AddResponseTransformer(builder => builder
     .TransformDocument(config => config
-        .InjectScript(script => script.FromEmbeddedResource("MyApp.Scripts.analytics.js").At("//body"))
+        .InjectScript(script => script.FromEmbeddedResource("MyApp.Scripts.analytics.js", typeof(Program).Assembly).At("//body"))
         .InjectStyleSheet(css => css.FromUrl("/css/styles.css").At("//head"))
         .InjectImage(img => img.FromUrl("/images/logo.png").At("//div[@id='header']"))
         .InjectHtml(html => html.WithContent("<div>Welcome!</div>").At("//body"))));

@@ -18,15 +18,14 @@ public record HtmlContentInjectionBuilder(HtmlContentInjectionConfig Config)
     /// </summary>
     /// <param name="resourceName">The name of the embedded resource containing the script.</param>
     /// <param name="resourceAssembly">The assembly containing the resource.</param>
-    /// <remarks>If <paramref name="resourceAssembly"/> is not provided, the calling assembly will be used.</remarks>
-    public HtmlContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly? resourceAssembly = null)
+    public HtmlContentInjectionBuilder FromEmbeddedResource(string resourceName, Assembly resourceAssembly)
     {
         return this with
         {
             Config = Config with
             {
                 ResourceName = resourceName,
-                ResourceAssembly = resourceAssembly ?? Assembly.GetCallingAssembly(),
+                ResourceAssembly = resourceAssembly,
                 Content = null
             }
         };
