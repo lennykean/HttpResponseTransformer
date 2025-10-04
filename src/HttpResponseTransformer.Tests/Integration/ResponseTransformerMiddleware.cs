@@ -36,26 +36,20 @@ public class ResponseTransformerMiddlewareTests
                 content = content.ToUpperInvariant();
             });
 
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(_ => _);
-                    services.AddSingleton<IResponseTransform>(mockTransform.Object);
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
+                        .TransformText(mockTransform.Object)))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/plain";
                         await context.Response.WriteAsync("hello world");
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/plain");
@@ -64,9 +58,12 @@ public class ResponseTransformerMiddlewareTests
         var response = await client.GetAsync("/transform");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Is.EqualTo("HELLO WORLD"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Is.EqualTo("HELLO WORLD"));
+        });
     }
 
     [Test]
@@ -88,26 +85,20 @@ public class ResponseTransformerMiddlewareTests
                 }
             });
 
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(_ => _);
-                    services.AddSingleton<IResponseTransform>(mockTransform.Object);
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
+                        .TransformDocument(mockTransform.Object)))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync("<html><body><h1>Welcome</h1></body></html>");
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/html");
@@ -116,39 +107,36 @@ public class ResponseTransformerMiddlewareTests
         var response = await client.GetAsync("/");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Does.Contain("<blink>Welcome</blink>"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Does.Contain("<blink>Welcome</blink>"));
+        });
     }
 
     [Test]
     public async Task Transform_WithContentInjection_InjectsContent()
     {
         // Arrange
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(builder => builder
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
                         .TransformDocument(injectionBuilder => injectionBuilder
                             .When(ctx => true)
                             .InjectScript(scriptBuilder => scriptBuilder
                                 .FromUrl("https://code.jquery.com/jquery.min.js")
-                                .At("//body"))));
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+                                .At("//body")))))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/html";
                         await context.Response.WriteAsync("<html><head></head><body><h1>My Page</h1></body></html>");
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/html");
@@ -157,9 +145,12 @@ public class ResponseTransformerMiddlewareTests
         var response = await client.GetAsync("/");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Does.Contain("<script src=\"https://code.jquery.com/jquery.min.js\">"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Does.Contain("<script src=\"https://code.jquery.com/jquery.min.js\">"));
+        });
     }
 
     [Test]
@@ -177,26 +168,20 @@ public class ResponseTransformerMiddlewareTests
                 content = "SHOULD NOT SEE THIS";
             });
 
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(_ => _);
-                    services.AddSingleton<IResponseTransform>(mockTransform.Object);
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
+                        .TransformText(mockTransform.Object)))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/plain";
                         await context.Response.WriteAsync("original content");
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/plain");
@@ -205,9 +190,12 @@ public class ResponseTransformerMiddlewareTests
         var response = await client.GetAsync("/");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Is.EqualTo("original content"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Is.EqualTo("original content"));
+        });
     }
 
     [Test]
@@ -225,27 +213,21 @@ public class ResponseTransformerMiddlewareTests
                 content = "SHOULD NOT SEE THIS";
             });
 
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(_ => _);
-                    services.AddSingleton<IResponseTransform>(mockTransform.Object);
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
+                        .TransformText(mockTransform.Object)))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/plain";
-                        context.Response.StatusCode = 204; // No Content
+                        context.Response.StatusCode = 204;
                         await context.Response.CompleteAsync();
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/plain");
@@ -285,27 +267,21 @@ public class ResponseTransformerMiddlewareTests
                 content = content.ToUpperInvariant();
             });
 
-        var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(_ => _);
-                    services.AddSingleton<IResponseTransform>(mockTransform1.Object);
-                    services.AddSingleton<IResponseTransform>(mockTransform2.Object);
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+        using var host = new HostBuilder()
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
+                        .TransformText(mockTransform1.Object)
+                        .TransformText(mockTransform2.Object)))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/plain";
                         await context.Response.WriteAsync("hello world");
-                    });
-                });
-            });
+                    })))
+            .Start();
 
-        using var host = hostBuilder.Start();
         var server = host.GetTestServer();
         var client = server.CreateClient();
         client.DefaultRequestHeaders.Add("Accept", "text/plain");
@@ -314,9 +290,12 @@ public class ResponseTransformerMiddlewareTests
         var response = await client.GetAsync("/");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Is.EqualTo("HELLO UNIVERSE"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Is.EqualTo("HELLO UNIVERSE"));
+        });
     }
 }
 

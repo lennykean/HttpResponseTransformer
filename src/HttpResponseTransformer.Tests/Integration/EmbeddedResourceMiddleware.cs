@@ -1,5 +1,8 @@
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+
+using HtmlAgilityPack;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -21,29 +24,26 @@ public class EmbeddedResourceMiddlewareTests
     [SetUp]
     public void SetUp()
     {
+        var assembly = GetType().Assembly;
+
         var hostBuilder = new HostBuilder()
-            .ConfigureWebHost(webHost =>
-            {
-                webHost.UseTestServer();
-                webHost.ConfigureServices(services =>
-                {
-                    services.AddResponseTransformer(builder => builder
+            .ConfigureWebHost(webHost => webHost
+                .UseTestServer()
+                .ConfigureServices(services => services
+                    .AddResponseTransformer(builder => builder
                         .TransformDocument(document => document
-                            .InjectHtml(html => html
-                                .WithContent("<body>Never Gonna Give You Up!</body>")
-                                .Replace())));
-                });
-                webHost.Configure(app =>
-                {
-                    app.Run(async context =>
+                            .When(ctx => true)
+                            .InjectScript(script => script
+                                .FromEmbeddedResource($"{assembly.GetName().Name}.resources.a-resource.txt", assembly)
+                                .At("//body")))))
+                .Configure(app => app
+                    .Run(async context =>
                     {
                         context.Response.ContentType = "text/html";
                         context.Response.StatusCode = 200;
 
-                        await context.Response.WriteAsync("<html><body>You should not see this</body></html>");
-                    });
-                });
-            });
+                        await context.Response.WriteAsync("<html><head></head><body><h1>Test Page</h1></body></html>");
+                    })));
 
         _host = hostBuilder.Start();
         _server = _host.GetTestServer();
@@ -57,20 +57,28 @@ public class EmbeddedResourceMiddlewareTests
 
 
     [Test]
-    public async Task Get_Document()
+    public async Task EmbeddedResourceMiddleware_ServesEmbeddedResource()
     {
         // Arrange
         var client = _server.CreateClient();
+        var response = await client.GetAsync("/");
+        var htmlContent = await response.Content.ReadAsStringAsync();
+        var doc = new HtmlDocument();
+
+        doc.LoadHtml(htmlContent);
+
+        var scriptTag = doc.DocumentNode.SelectSingleNode("//script");
+        var scriptSrc = scriptTag.GetAttributeValue("src", null);
 
         // Act
-        var response = await client.GetAsync("/");
+        var resourceResponse = await client.GetAsync(scriptSrc);
 
         // Assert
-        var content = await response.Content.ReadAsStringAsync();
+        var resourceContent = await resourceResponse.Content.ReadAsStringAsync();
         Assert.Multiple(() =>
         {
-            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-            Assert.That(content, Is.EqualTo("<html><body>Never Gonna Give You Up!</body></html>"));
+            Assert.That(resourceResponse.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(resourceContent, Does.Contain("Help! I'm embedded in this assembly!"));
         });
     }
 }
