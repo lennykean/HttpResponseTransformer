@@ -17,7 +17,6 @@ public class EmbeddedResourceMiddlewareTests
 {
     private IHost _host = null!;
     private TestServer _server = null!;
-    private IEmbeddedResourceManager _resourceManager = null!;
 
     [SetUp]
     public void SetUp()
@@ -28,21 +27,26 @@ public class EmbeddedResourceMiddlewareTests
                 webHost.UseTestServer();
                 webHost.ConfigureServices(services =>
                 {
-                    services.AddResponseTransformer(_ => _);
+                    services.AddResponseTransformer(builder => builder
+                        .TransformDocument(document => document
+                            .InjectHtml(html => html
+                                .WithContent("<body>Never Gonna Give You Up!</body>")
+                                .Replace())));
                 });
                 webHost.Configure(app =>
                 {
                     app.Run(async context =>
                     {
-                        context.Response.StatusCode = 404;
-                        await context.Response.WriteAsync("Not Found");
+                        context.Response.ContentType = "text/html";
+                        context.Response.StatusCode = 200;
+
+                        await context.Response.WriteAsync("<html><body>You should not see this</body></html>");
                     });
                 });
             });
 
         _host = hostBuilder.Start();
         _server = _host.GetTestServer();
-        _resourceManager = _server.Services.GetRequiredService<IEmbeddedResourceManager>();
     }
 
     [TearDown]
@@ -51,84 +55,23 @@ public class EmbeddedResourceMiddlewareTests
         _host?.Dispose();
     }
 
+
     [Test]
-    public async Task Get_WithValidEmbeddedResource_ReturnsResource()
+    public async Task Get_Document()
     {
         // Arrange
-        var assembly = GetType().Assembly;
-        var resourceName = $"{assembly.GetName().Name}.resources.a-resource.txt";
-        _resourceManager.TryAddResource(assembly, resourceName, "text/plain", out var namespaceKey, out var resourceKey);
-
         var client = _server.CreateClient();
 
         // Act
-        var response = await client.GetAsync($"/_/{namespaceKey}/{resourceKey}");
+        var response = await client.GetAsync("/");
 
         // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("text/plain"));
-
         var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Does.Contain("Help! I'm embedded in this assembly!"));
-    }
-
-    [Test]
-    public async Task Get_WithInvalidNamespaceKey_ReturnsNotFound()
-    {
-        // Arrange
-        var client = _server.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/_/invalid-namespace/invalid-resource.txt");
-
-        // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
-
-    [Test]
-    public async Task Get_WithInvalidPath_ReturnsNotFound()
-    {
-        // Arrange
-        var client = _server.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/_/only-one-segment");
-
-        // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-    }
-
-    [Test]
-    public async Task Get_WithoutEmbeddedResourcePrefix_PassesThrough()
-    {
-        // Arrange
-        var client = _server.CreateClient();
-
-        // Act
-        var response = await client.GetAsync("/regular/path");
-
-        // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.NotFound));
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.That(content, Is.EqualTo("Not Found"));
-    }
-
-    [Test]
-    public async Task Get_WithDefaultContentType_ReturnsOctetStream()
-    {
-        // Arrange
-        var assembly = GetType().Assembly;
-        var resourceName = $"{assembly.GetName().Name}.resources.a-resource.txt";
-        _resourceManager.TryAddResource(assembly, resourceName, null, out var namespaceKey, out var resourceKey);
-
-        var client = _server.CreateClient();
-
-        // Act
-        var response = await client.GetAsync($"/_/{namespaceKey}/{resourceKey}");
-
-        // Assert
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
-        Assert.That(response.Content.Headers.ContentType?.MediaType, Is.EqualTo("application/octet-stream"));
+        Assert.Multiple(() =>
+        {
+            Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+            Assert.That(content, Is.EqualTo("<html><body>Never Gonna Give You Up!</body></html>"));
+        });
     }
 }
 

@@ -8,30 +8,22 @@ namespace HttpResponseTransformer;
 
 internal class EmbeddedResourceManager : IEmbeddedResourceManager
 {
-    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, (byte[] Data, string? ContentType)>> _resources = [];
+    private record ResourceReference(Assembly Assembly, string ResourceName, string? ContentType);
+
+    private readonly ConcurrentDictionary<string, ConcurrentDictionary<string, ResourceReference>> _resources = [];
 
     public bool TryAddResource(Assembly resourceAssembly, string resourceName, string? contentType, out string namespaceKey, out string resourceKey)
     {
         namespaceKey = ComputeHash(resourceAssembly.GetName().FullName);
         resourceKey = $"{ComputeHash(resourceName)}{Path.GetExtension(resourceName)}";
 
-        using var stream = resourceAssembly.GetManifestResourceStream(resourceName);
-        if (stream is null)
+        if (resourceAssembly.GetManifestResourceStream(resourceName) is null)
         {
             return false;
         }
+        var namespaceResources = _resources.GetOrAdd(namespaceKey, _ => new());
 
-        using var buffer = new MemoryStream();
-        stream.CopyTo(buffer);
-
-        if (!_resources.TryGetValue(namespaceKey, out var namespaceResources))
-        {
-            namespaceResources = new();
-            _resources.TryAdd(namespaceKey, namespaceResources);
-        }
-        namespaceResources[resourceKey] = (buffer.ToArray(), contentType);
-
-        return true;
+        return namespaceResources.TryAdd(resourceKey, new(resourceAssembly, resourceName, contentType));
     }
 
     public bool TryGetResourceKeys(Assembly resourceAssembly, string resourceName, out string namespaceKey, out string resourceKey)
@@ -59,7 +51,16 @@ internal class EmbeddedResourceManager : IEmbeddedResourceManager
         {
             return false;
         }
-        data = resource.Data;
+        using var buffer = new MemoryStream();
+        using var stream = resource.Assembly.GetManifestResourceStream(resource.ResourceName);
+
+        if (stream is null)
+        {
+            return false;
+        }
+        stream.CopyTo(buffer);
+
+        data = buffer.ToArray();
         contentType = resource.ContentType;
 
         return true;

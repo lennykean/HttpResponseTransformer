@@ -11,12 +11,14 @@ using Microsoft.Net.Http.Headers;
 
 namespace HttpResponseTransformer.Middleware;
 
-internal class ResponseTransformerMiddleware(IEnumerable<IResponseTransform> transforms, ResponseTransformerConfig? config) : IMiddleware
+internal abstract class ResponseTransformerMiddleware(
+    IEnumerable<IResponseTransform> transforms,
+    ResponseTransformerConfig? config = default)
 {
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    protected async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
-        var activeTransforms = transforms.Where(t => t.ShouldTransform(context)).ToList();
-        if (activeTransforms.Count == 0)
+        var activeTransforms = transforms?.Where(t => t.ShouldTransform(context)).ToList();
+        if (activeTransforms?.Any() is not true)
         {
             await next(context);
             return;
@@ -61,5 +63,26 @@ internal class ResponseTransformerMiddleware(IEnumerable<IResponseTransform> tra
             }
             context.Response.Body = contentStream;
         }
+    }
+}
+
+internal class ScopedResponseTransformerMiddleware(
+    RequestDelegate next,
+    IEnumerable<IResponseTransform> transforms,
+    ResponseTransformerConfig? config = default) : ResponseTransformerMiddleware(transforms, config)
+{
+    public Task InvokeAsync(HttpContext context)
+    {
+        return InvokeAsync(context, next);
+    }
+}
+
+internal class GlobalResponseTransformerMiddleware(
+    IEnumerable<IResponseTransform> transforms,
+    ResponseTransformerConfig? config = default) : ResponseTransformerMiddleware(transforms, config), IMiddleware
+{
+    Task IMiddleware.InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        return InvokeAsync(context, next);
     }
 }

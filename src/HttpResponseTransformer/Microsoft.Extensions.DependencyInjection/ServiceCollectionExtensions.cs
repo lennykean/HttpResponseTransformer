@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 using HttpResponseTransformer;
+using HttpResponseTransformer.Configuration;
 using HttpResponseTransformer.Configuration.Builders;
 using HttpResponseTransformer.Middleware;
+using HttpResponseTransformer.Transforms;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -19,43 +22,51 @@ public static class ServiceCollectionExtensions
     /// Add HTTP response transform services to the dependency injection container
     /// </summary>
     /// <param name="configure">Optional configuration function for setting up response transforms.</param>
-    public static IServiceCollection AddResponseTransformer(this IServiceCollection services, Func<ResponseTransformBuilder, ResponseTransformBuilder>? configure)
+    public static IServiceCollection AddResponseTransformer(this IServiceCollection services, Func<ResponseTransformBuilder, ResponseTransformBuilder>? configure = default)
     {
-        var embeddedResourceManager = new EmbeddedResourceManager();
-
-        services.TryAddSingleton<IEmbeddedResourceManager>(embeddedResourceManager);
-
-        services.TryAddTransient<ResponseTransformerMiddleware>();
-        services.TryAddTransient<EmbeddedResourceMiddleware>();
-
-        services.AddTransient<IStartupFilter, StartupFilter>();
+        services.TryAddTransient<GlobalResponseTransformerMiddleware>();
+        services.AddTransient<IStartupFilter, GlobalStartupFilter>();
 
         if (configure is not null)
         {
-            var builder = configure(new(embeddedResourceManager));
-            services.AddSingleton(builder.Config);
-            foreach (var transform in builder.Transforms)
+            services.AddTransient<IStartupFilter>(_ =>
             {
-                services.AddSingleton(transform);
-            }
+                var resourceManager = new EmbeddedResourceManager();
+                var builder = configure(new(resourceManager));
+
+                return new ScopedStartupFilter(resourceManager, builder.Transforms, builder.Config);
+            });
         }
         return services;
     }
 
-    private class StartupFilter : IStartupFilter
+
+    private class GlobalStartupFilter : IStartupFilter
     {
-        private int _isConfigured = 0;
+        private static int _registered = 0;
 
         public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
         {
             return builder =>
             {
-                if (Interlocked.CompareExchange(ref _isConfigured, value: 1, comparand: 0) == 0)
+                if (Interlocked.CompareExchange(ref _registered, value: 1, comparand: 0) == 0)
                 {
-                    builder
-                       .UseMiddleware<ResponseTransformerMiddleware>()
-                       .MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/_"), b => b.UseMiddleware<EmbeddedResourceMiddleware>());
+                    builder.UseMiddleware<GlobalResponseTransformerMiddleware>();
                 }
+                next(builder);
+            };
+        }
+    }
+
+    private class ScopedStartupFilter(IEmbeddedResourceManager resourceManager, IEnumerable<IResponseTransform> transforms, ResponseTransformerConfig config) : IStartupFilter
+    {
+        public Action<IApplicationBuilder> Configure(Action<IApplicationBuilder> next)
+        {
+            return builder =>
+            {
+                builder.UseMiddleware<ScopedResponseTransformerMiddleware>(transforms, config);
+                builder.UseMiddleware<EmbeddedResourceMiddleware>(resourceManager);
+
                 next(builder);
             };
         }

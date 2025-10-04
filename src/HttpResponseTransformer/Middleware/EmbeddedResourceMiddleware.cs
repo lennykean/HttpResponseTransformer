@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace HttpResponseTransformer.Middleware;
 
-internal class EmbeddedResourceMiddleware(IEmbeddedResourceManager embeddedResourceManager) : IMiddleware
+internal class EmbeddedResourceMiddleware(RequestDelegate next, IEmbeddedResourceManager embeddedResourceManager)
 {
-    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
+    public async Task InvokeAsync(HttpContext context)
     {
         if (!context.Request.Path.StartsWithSegments("/_", out var path))
         {
