@@ -1,10 +1,8 @@
 name: Publish
-
 on:
   push:
     tags:
     - v*
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -22,8 +20,9 @@ jobs:
         echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
     - name: Set version and suffix
       run: |
-        VERSION=$(echo ${GITHUB_REF#refs/tags/v})"."${GITHUB_RUN_NUMBER}
-        if [[ "${{ env.BRANCH_NAME }}" != "main" ]]; then
+        TAG_NAME=$(echo ${GITHUB_REF#refs/tags/v})
+        VERSION=${TAG_NAME}"."${GITHUB_RUN_NUMBER}
+        if [[ "$TAG_NAME" == *"-"* ]]; then
           VERSION=${VERSION}-prerelease
         fi
         echo "VERSION_SUFFIX=${SUFFIX}" >> $GITHUB_ENV
