@@ -2,7 +2,7 @@
 
 [![Build](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/build.yml/badge.svg)](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/build.yml)
 [![Publish](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/publish.yml/badge.svg)](https://github.com/lennykean/HttpResponseTransformer/actions/workflows/publish.yml)
-![NuGet Version](https://img.shields.io/nuget/v/HttpResponseTransformer)
+[![NuGet Version](https://img.shields.io/nuget/v/HttpResponseTransformer)](https://www.nuget.org/packages/HttpResponseTransformer)
 
 An ASP.NET Core library for injecting customizable transforms into the HTTP response pipeline. This library enables dynamic modification of HTTP responses, with specialized support for HTML document manipulation and content injection.
 
