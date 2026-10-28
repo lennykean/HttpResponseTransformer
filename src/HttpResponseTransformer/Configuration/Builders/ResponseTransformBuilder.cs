@@ -34,6 +34,26 @@ public record ResponseTransformBuilder
     }
 
     /// <summary>
+    /// Cache the transformed output
+    /// </summary>
+    /// <param name="configure">The fluent builder function to configure caching.</param>
+    public ResponseTransformBuilder WithCaching(Func<CachingBuilder, CachingBuilder>? configure = null)
+    {
+        var caching = new CachingBuilder(new());
+        if (configure is not null)
+        {
+            caching = configure(caching);
+        }
+        return this with
+        {
+            Config = Config with
+            {
+                Caching = caching.Config
+            }
+        };
+    }
+
+    /// <summary>
     /// Add a response transform to the pipeline
     /// </summary>
     /// <param name="transform">The response transform to add.</param>
@@ -70,5 +90,14 @@ public record ResponseTransformBuilder
     public ResponseTransformBuilder TransformDocument(Func<DocumentInjectionConfigBuilder, DocumentInjectionConfigBuilder> configure)
     {
         return TransformDocument(new InjectContentResponseTransform(configure(new(new())).Config, _embeddedResourceManager));
+    }
+
+    /// <summary>
+    /// Add an image transform to the pipeline
+    /// </summary>
+    /// <param name="configure">The fluent builder function to configure the image transform.</param>
+    public ResponseTransformBuilder TransformImage(Func<ImageTransformBuilder, ImageTransformBuilder> configure)
+    {
+        return TransformResponse(new ImageResponseTransform(configure(new(new())).Config));
     }
 }

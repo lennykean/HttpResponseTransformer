@@ -60,7 +60,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 
 HttpResponseTransformer integrates into the ASP.NET Core's middleware pipeline to intercept and transform HTTP responses. Filters determine whether transforms should run (`IResponseTransformer.ShouldTransform`, or `builder.When()` for injection transforms). When a transform executes, the response stream is buffered in memory and transformed by `IResponseTransformer.ExecuteTransform()` before being returned to the client.
 
-> **Important**:  Transforms buffer the entire response stream in memory. Care should be taken when working with large documents or streaming content. `ShouldTransform()` or `builder.When()` should be used to target specific requests and avoid unnecessary buffering.
+> **Important**: Transforms buffer the entire response stream in memory. Care should be taken when working with large documents or streaming content. `ShouldTransform()` or `builder.When()` should be used to target specific requests and avoid unnecessary buffering.
 
 ### Response Compression
 
@@ -77,6 +77,29 @@ services.AddResponseTransformer(builder => builder
 ```
 
 > **Warning**: When response compression is enabled, transforms should be prepared to handle compressed content themselves. Built-in transforms will fail if they receive compressed data.
+
+### Caching
+
+`WithCaching()` caches the transformed output. The endpoint still runs on every request.
+
+```csharp
+services.AddResponseTransformer(builder => builder
+    .TransformDocument(config => config
+        ...
+    )
+    .WithCaching());
+```
+
+By default, `WithCaching()` caches anonymous GET requests that return `200 OK`, keyed by full URL and `Accept` header, for ten minutes. These defaults can be overridden with the cache builder.
+
+```csharp
+services.AddResponseTransformer(builder => builder
+    ...
+    .WithCaching(cache => cache
+        .When(ctx => HttpMethods.IsGet(ctx.Request.Method))
+        .Key(ctx => $"{ctx.Request.Path}|{ctx.Request.Headers["Accept-Language"]}")
+        .Options(new MemoryCacheEntryOptions { SlidingExpiration = TimeSpan.FromMinutes(5) })));
+```
 
 ### Types of Transforms
 
@@ -114,6 +137,21 @@ services.AddResponseTransformer(builder => builder
         .InjectStyleSheet(css => css.FromUrl("/css/styles.css").At("//head"))
         .InjectImage(img => img.FromUrl("/images/logo.png").At("//div[@id='header']"))
         .InjectHtml(html => html.WithContent("<div>Welcome!</div>").At("//body"))));
+```
+
+### Image Transforms
+
+Images can be resized, reencoded and stripped of metadata using `TransformImage()`.
+
+```csharp
+services.AddResponseTransformer(builder => builder
+    .TransformImage(image => image
+        .When(info => info.Width > 1600 || info.Height > 1600)
+        .Resize(1600, 1600)
+        .StripMetadata()
+        .Format(ImageFormat.Jpeg)
+        .Quality(80))
+    .WithCaching());
 ```
 
 ### Custom HTML Transforms

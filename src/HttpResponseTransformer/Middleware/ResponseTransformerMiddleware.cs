@@ -7,6 +7,8 @@ using HttpResponseTransformer.Configuration;
 using HttpResponseTransformer.Transforms;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Net.Http.Headers;
 
 namespace HttpResponseTransformer.Middleware;
@@ -42,6 +44,24 @@ internal abstract class ResponseTransformerMiddleware(
             {
                 return;
             }
+            string? cacheKey = null;
+            var caching = config?.Caching;
+            if (caching is not null && !context.Response.Headers.ContainsKey(HeaderNames.ContentEncoding) && caching.Predicate(context))
+            {
+                var activeMask = string.Concat(transforms.Select(transform => activeTransforms.Contains(transform) ? '1' : '0'));
+                cacheKey = $"{activeMask} {caching.Key(context)}";
+            }
+            var cache = cacheKey is null ? null : context.RequestServices.GetRequiredService<IMemoryCache>();
+            if (cache is not null && cache.TryGetValue((this, cacheKey), out (byte[] Content, string? ContentType) cached))
+            {
+                context.Response.ContentType = cached.ContentType;
+                context.Response.ContentLength = cached.Content.Length;
+
+                using var cachedContent = new MemoryStream(cached.Content, writable: false);
+                await cachedContent.CopyToAsync(contentStream);
+                await contentStream.FlushAsync();
+                return;
+            }
             foreach (var transform in activeTransforms)
             {
                 transform.ExecuteTransform(context, ref content);
@@ -49,6 +69,13 @@ internal abstract class ResponseTransformerMiddleware(
             if (content is null)
             {
                 return;
+            }
+            if (cache is not null && caching is not null)
+            {
+                using var entry = cache.CreateEntry((this, cacheKey));
+                entry.SetOptions(caching.Options);
+                entry.Size ??= content.Length;
+                entry.Value = (content, context.Response.ContentType);
             }
             context.Response.ContentLength = content.Length;
 

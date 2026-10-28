@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
     {
         services.TryAddTransient<GlobalResponseTransformerMiddleware>();
         services.AddTransient<IStartupFilter, GlobalStartupFilter>();
+        services.AddMemoryCache();
 
         if (configure is not null)
         {

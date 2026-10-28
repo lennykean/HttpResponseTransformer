@@ -1,7 +1,3 @@
 {
-  "editor.rulers": [180],
-  "[csharp]": {
-    "editor.defaultFormatter": "anysphere.csharp"
-  },
-  "cSpell.words": ["comparand", "Inlineable", "Jellyfin", "netstandard", "Registrator", "snupkg", "stylesheet"]
+  "editor.rulers": [120]
 }
